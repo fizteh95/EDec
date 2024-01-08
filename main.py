@@ -1,13 +1,17 @@
 import datetime
 from datetime import timedelta
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, status, Request
+from fastapi import Depends, FastAPI, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security.utils import get_authorization_scheme_param
 from fastapi.templating import Jinja2Templates
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
+import logging
+
+logging.getLogger('passlib').setLevel(logging.ERROR)
 
 # to get a string like this run:
 # openssl rand -hex 32
@@ -51,7 +55,27 @@ templates = Jinja2Templates(directory="templates")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+class OAuth2PasswordBearerWithCookie(OAuth2PasswordBearer):
+    async def __call__(self, request: Request) -> Optional[str]:
+        # changed to accept access token from httpOnly Cookie
+        authorization: str = request.cookies.get("access_token", "")
+        print("access_token is ", authorization)
+
+        scheme, param = get_authorization_scheme_param(authorization)
+        if not authorization or scheme.lower() != "bearer":
+            if self.auto_error:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Not authenticated",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            else:
+                return None
+        return param
+
+
+oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="token")
 
 app = FastAPI()
 
@@ -96,16 +120,20 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    print("tratata")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        print(username)
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
     except JWTError:
+        print("ha")
         raise credentials_exception
     user = get_user(fake_users_db, username=token_data.username)
     if user is None:
+        print("hop")
         raise credentials_exception
     return user
 
@@ -120,7 +148,7 @@ async def get_current_active_user(
 
 @app.post("/token", response_model=Token)
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+    response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ):
     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
     if not user:
@@ -133,6 +161,8 @@ async def login_for_access_token(
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
+    response.set_cookie(key="access_token", value=f"Bearer {access_token}",
+                        httponly=True)  # set HttpOnly cookie in response
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -140,6 +170,7 @@ async def login_for_access_token(
 async def read_users_me(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
+    print("toptop")
     return current_user
 
 
@@ -151,22 +182,47 @@ async def read_own_items(
 
 
 @app.get("/login/")
-def login(request: Request):
+async def login(request: Request):
+    print("login form get")
     return templates.TemplateResponse("auth/login.html", {"request": request})
 
 
-# @router.post("/login/")
-# async def login(request: Request, db: Session = Depends(get_db)):
-#     form = LoginForm(request)
-#     await form.load_data()
-#     if await form.is_valid():
-#         try:
-#             form.__dict__.update(msg="Login Successful :)")
-#             response = templates.TemplateResponse("auth/login.html", form.__dict__)
-#             login_for_access_token(response=response, form_data=form, db=db)
-#             return response
-#         except HTTPException:
-#             form.__dict__.update(msg="")
-#             form.__dict__.get("errors").append("Incorrect Email or Password")
-#             return templates.TemplateResponse("auth/login.html", form.__dict__)
-#     return templates.TemplateResponse("auth/login.html", form.__dict__)
+class LoginForm:
+    def __init__(self, request: Request):
+        self.request: Request = request
+        self.errors: list = []
+        self.username: Optional[str] = None
+        self.password: Optional[str] = None
+
+    async def load_data(self):
+        form = await self.request.form()
+        self.username = form.get(
+            "username"
+        )  # since outh works on username field we are considering email as username
+        self.password = form.get("password")
+
+    async def is_valid(self):
+        # if not self.username or not (self.username.__contains__("@")):
+        #     self.errors.append("Email is required")
+        if not self.password or not len(self.password) >= 4:
+            self.errors.append("A valid password is required")
+        if not self.errors:
+            return True
+        return False
+
+
+@app.post("/login/")
+async def login_auth(request: Request):
+    form = LoginForm(request)
+    await form.load_data()
+    if await form.is_valid():
+        try:
+            form.__dict__.update(msg="Login Successful :)")
+            response = templates.TemplateResponse("auth/login.html", form.__dict__)
+            await login_for_access_token(response=response, form_data=form)
+            return response
+        except HTTPException:
+            form.__dict__.update(msg="")
+            form.__dict__.get("errors").append("Incorrect Email or Password")
+            return templates.TemplateResponse("auth/login.html", form.__dict__)
+    return templates.TemplateResponse("auth/login.html", form.__dict__)
