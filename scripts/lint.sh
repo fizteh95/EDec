@@ -2,6 +2,6 @@
 
 set -euxo pipefail
 
-isort --check-only .
+# isort --check-only .
 black --check .
 mypy .

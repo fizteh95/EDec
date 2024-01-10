@@ -1,17 +1,25 @@
 import datetime
+import logging
 from datetime import timedelta
-from typing import Annotated, Optional
+from typing import Annotated
+from typing import Optional
 
-from fastapi import Depends, FastAPI, HTTPException, status, Request, Response
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import Depends
+from fastapi import FastAPI
+from fastapi import HTTPException
+from fastapi import Request
+from fastapi import Response
+from fastapi import status
+from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.security.utils import get_authorization_scheme_param
 from fastapi.templating import Jinja2Templates
-from jose import JWTError, jwt
+from jose import JWTError
+from jose import jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
-import logging
 
-logging.getLogger('passlib').setLevel(logging.ERROR)
+logging.getLogger("passlib").setLevel(logging.ERROR)
 
 # to get a string like this run:
 # openssl rand -hex 32
@@ -161,8 +169,9 @@ async def login_for_access_token(
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
-    response.set_cookie(key="access_token", value=f"Bearer {access_token}",
-                        httponly=True)  # set HttpOnly cookie in response
+    response.set_cookie(
+        key="access_token", value=f"Bearer {access_token}", httponly=True
+    )  # set HttpOnly cookie in response
     return {"access_token": access_token, "token_type": "bearer"}
 
 

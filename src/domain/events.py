@@ -1,13 +1,23 @@
+import typing as tp
+import uuid
 from dataclasses import dataclass
 
-from src.domain.models import SimpleVote, SimplePoll
+from src.domain.models import SimplePoll
+from src.domain.models import SimpleVote
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Event:
     """
     Base class for events
     """
+
+    id_: str = ""
+    parent_id: str = ""
+    track_for_event_class: type | None = None
+
+    def __post_init__(self) -> None:
+        self.id_ = str(uuid.uuid4())
 
 
 @dataclass
