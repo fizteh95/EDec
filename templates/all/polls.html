@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style type="text/css">
+        table, th, td {
+            border: 2px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Опросы</h1>
+    <br>
+    <div style="margin: 50px; border: solid 5px black;">
+        <table style="width: 100%">
+            <tr>
+                <td>Название</td>
+                <td>Описание</td>
+            </tr>
+            {% for poll in polls %}
+            <tr>
+                <td>{{ poll.name }}</td>
+                <td>{{ poll.description }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>

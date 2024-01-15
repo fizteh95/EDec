@@ -3,8 +3,12 @@ from abc import abstractmethod
 
 from src.domain.events import CreatePoll
 from src.domain.events import Event
+from src.domain.events import GetPollIds
 from src.domain.events import GetPollResult
+from src.domain.events import GetPollsByIds
 from src.domain.events import PollResult
+from src.domain.events import Polls
+from src.domain.events import PollsIds
 from src.domain.events import VoteEvent
 from src.domain.models import SimplePoll
 from src.domain.models import SimpleVote
@@ -28,7 +32,11 @@ class AbstractAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def create_vote(self, vote: SimpleVote) -> bool:
+    async def get_polls_ids(self) -> list[str]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create_vote(self, user_id: str, poll_id: str, variant_id: str) -> bool:
         raise NotImplementedError
 
     @abstractmethod
@@ -59,7 +67,11 @@ class VoteSaver(BaseProcessor):
     async def process(self, event: Event) -> list[Event]:
         if not isinstance(event, VoteEvent):
             return []
-        _ = await self.db_adapter.create_vote(vote=event.vote)
+        _ = await self.db_adapter.create_vote(
+            user_id=event.vote.user_id,
+            poll_id=event.vote.poll_id,
+            variant_id=event.vote.variant_id,
+        )
         return []
 
 
@@ -87,3 +99,27 @@ class VoteCounter(BaseProcessor):
         poll_result = PollResult(poll_id=event.poll_id, results=results)
         poll_result.parent_id = event.id_
         return [poll_result]
+
+
+class PollGetter(BaseProcessor):
+    async def process(self, event: Event) -> list[Event]:
+        if not isinstance(
+            event,
+            (
+                GetPollIds,
+                GetPollsByIds,
+            ),
+        ):
+            return []
+        if isinstance(event, GetPollsByIds):
+            polls = await self.db_adapter.get_polls(polls_ids=event.polls_ids)
+            out_event = Polls(polls=polls, sender_user_id=event.sender_user_id)
+            out_event.parent_id = event.id_
+            return [out_event]
+        elif isinstance(event, GetPollIds):
+            ids = await self.db_adapter.get_polls_ids()
+            out_ids_event = PollsIds(sender_user_id=event.sender_user_id, ids=ids)
+            out_ids_event.parent_id = event.id_
+            return [out_ids_event]
+        else:
+            raise NotImplementedError

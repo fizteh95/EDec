@@ -48,6 +48,7 @@ class CreatePoll(Event):
 
 @dataclass
 class GetPollIds(Event):
+    sender_user_id: str
     ...
 
 
@@ -59,7 +60,8 @@ class GetPollsByIds(Event):
 
 @dataclass
 class PollsIds(Event):
-    ...
+    sender_user_id: str
+    ids: list[str]
 
 
 @dataclass
