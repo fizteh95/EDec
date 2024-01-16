@@ -5,6 +5,61 @@
     <title>Title</title>
 </head>
 <body>
+    <h1>Создание опроса</h1>
+    <br>
+    <div style="margin: 50px; border: solid 5px black;">
+        <form id="form" method="POST" action="/create_new_poll" style="width: 100%">
+            <input type="text" id="poll_name" name="poll_name" placeholder="Название опроса"><br>
+            <input type="text" id="poll_description" name="poll_description" placeholder="Описание опроса"><br>
+            <p>Варианты ответа:</p><br>
+            <input type="text" id="variant_1" name="variant_1" placeholder="Текст варианта"><br>
+            <input type="text" id="variant_2" name="variant_2" placeholder="Текст варианта">
+        </form>
+<!--        <br>-->
+        <button onclick="add_field()">Добавить вариант</button>
+        <script>
+            function add_field() {
+                // находим форму
+                var x = document.getElementById("form");
 
+                // создаем новое поле ввода
+                var new_field = document.createElement("input");
+                // определим нумерацию
+                var inputs = document.querySelectorAll('input[type=text]')
+                var num = parseInt(inputs[inputs.length - 1].id.split('_')[1]) + 1;
+                // установим для поля ввода тип данных 'text'
+                new_field.setAttribute("type", "text");
+                // установим имя для поля ввода
+                new_field.setAttribute("name", "variant_" + num);
+                // установим id для поля ввода
+                new_field.setAttribute("id", "variant_" + num);
+                // установим placeholder для поля ввода
+                new_field.setAttribute("placeholder", "Текст варианта");
+
+                // создаем кнопку удаления
+                var del_button = document.createElement("button")
+                // устанавливаем поведение кнопки
+                del_button.setAttribute("id", "delvar_" + num)
+                del_button.addEventListener("click", delete_field)
+                // текст кнопки
+                del_button.innerText = "удалить вариант"
+
+                // добавим поле ввода в форму
+                x.insertAdjacentHTML('beforeend', '<br id="br_'+ num + '">');
+                x.append(new_field)
+                x.append(del_button)
+            };
+
+            function delete_field(event) {
+                event.preventDefault()
+                var num = this.id.split("_")[1]
+                var variant_element = document.getElementById("variant_" + num);
+                var br_element = document.getElementById("br_" + num);
+                variant_element.remove();
+                br_element.remove();
+                this.remove();
+            }
+        </script>
+    </div>
 </body>
 </html>

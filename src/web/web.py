@@ -59,6 +59,9 @@ class FastApiWeb(AbstractWeb):
         self.router.add_api_route(
             path="/polls", endpoint=self.get_polls, methods=["GET"]
         )
+        self.router.add_api_route(
+            path="/new_poll", endpoint=self.new_poll, methods=["GET"]
+        )
         # self.router.add_api_route(
         #     path="/metrics", endpoint=self.metrics, methods=["GET"]
         # )
@@ -74,6 +77,10 @@ class FastApiWeb(AbstractWeb):
 
     async def get_polls(self, request: Request) -> _TemplateResponse:
         response: _TemplateResponse = await self.adapter.get_polls(request=request)
+        return response
+
+    async def new_poll(self, request: Request) -> _TemplateResponse:
+        response: _TemplateResponse = await self.adapter.new_poll(request=request)
         return response
 
     @staticmethod

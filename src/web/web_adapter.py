@@ -41,6 +41,10 @@ class AbstractWebAdapter(ABC):
     async def get_polls(self, request: Request) -> _TemplateResponse:
         """Return polls list"""
 
+    @abstractmethod
+    async def new_poll(self, request: Request) -> _TemplateResponse:
+        """Return page to create poll"""
+
 
 class WebAdapter(AbstractWebAdapter):
     def __init__(
@@ -82,6 +86,11 @@ class WebAdapter(AbstractWebAdapter):
         res: Polls = await self.bus.public_message(get_poll_request)  # type: ignore
         return self.templates.TemplateResponse(
             "all/polls.html", {"request": request, "polls": res.polls}
+        )
+
+    async def new_poll(self, request: Request) -> _TemplateResponse:
+        return self.templates.TemplateResponse(
+            "all/new_poll.html", {"request": request}
         )
 
     async def message_handler(
