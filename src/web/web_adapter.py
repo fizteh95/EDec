@@ -7,6 +7,7 @@ from fastapi import Request
 from fastapi.templating import Jinja2Templates
 from starlette.templating import _TemplateResponse
 
+from src.domain.events import CreatePoll
 from src.domain.events import GetPollIds
 from src.domain.events import GetPollsByIds
 from src.domain.events import Polls
@@ -44,6 +45,16 @@ class AbstractWebAdapter(ABC):
     @abstractmethod
     async def new_poll(self, request: Request) -> _TemplateResponse:
         """Return page to create poll"""
+
+    @abstractmethod
+    async def create_new_poll(
+        self, poll_name: str, poll_description: str, variants: list[str]
+    ) -> bool:
+        """Create poll from form"""
+
+    @abstractmethod
+    async def poll_vote(self, request: Request, item_id: str) -> _TemplateResponse:
+        """Page for vote in poll"""
 
 
 class WebAdapter(AbstractWebAdapter):
@@ -91,6 +102,34 @@ class WebAdapter(AbstractWebAdapter):
     async def new_poll(self, request: Request) -> _TemplateResponse:
         return self.templates.TemplateResponse(
             "all/new_poll.html", {"request": request}
+        )
+
+    async def create_new_poll(
+        self, poll_name: str, poll_description: str, variants: list[str]
+    ) -> bool:
+        """Create poll from form"""
+        create_poll = CreatePoll(
+            creator_id="",
+            name=poll_name,
+            description=poll_description,
+            is_open=True,
+            variants=variants,
+        )
+        _ = await self.bus.public_message(create_poll)
+        return True
+
+    async def poll_vote(self, request: Request, item_id: str) -> _TemplateResponse:
+        get_poll_request = GetPollsByIds(
+            polls_ids=[str(item_id)],
+            sender_user_id="",
+            track_for_event_class=Polls,
+        )
+        res: Polls = await self.bus.public_message(get_poll_request)  # type: ignore
+
+        poll = res.polls[0]
+
+        return self.templates.TemplateResponse(
+            "all/poll_vote.html", {"request": request, "poll": poll}
         )
 
     async def message_handler(

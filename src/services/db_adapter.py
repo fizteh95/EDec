@@ -42,7 +42,7 @@ class FakeDbAdapter(AbstractAdapter):
                         SimpleVariant(name="Нет", poll_id="2", variant_id="4"),
                         SimpleVariant(name="Не знаю", poll_id="2", variant_id="5"),
                     ],
-                )
+                ),
             }
 
     async def create_poll(
@@ -85,6 +85,7 @@ class FakeDbAdapter(AbstractAdapter):
             current_poll = copy.deepcopy(self.polls.get(poll_id))
             if not current_poll:
                 continue
+            current_poll.variants = []
             for i in self.variants.values():
                 if i.poll_id == poll_id:
                     current_poll.variants.append(i)

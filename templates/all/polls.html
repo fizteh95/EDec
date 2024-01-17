@@ -21,7 +21,7 @@
             </tr>
             {% for poll in polls %}
             <tr>
-                <td>{{ poll.name }}</td>
+                <td><a href="/poll_vote/{{ poll.poll_id }}">{{ poll.name }}</a></td>
                 <td>{{ poll.description }}</td>
             </tr>
             {% endfor %}

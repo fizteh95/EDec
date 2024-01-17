@@ -5,6 +5,19 @@
     <title>Title</title>
 </head>
 <body>
-
+    <h1>Голосование</h1>
+    <h2>{{ poll.name }}</h2>
+    <h3>{{ poll.description }}</h3>
+    <div style="margin: 50px; border: solid 5px black;">
+        <form id="form" method="POST" action="/vote" style="width: 100%">
+            <fieldset>
+                <legend>Выберите один вариант</legend>
+                {% for variant in poll.variants %}
+                <label><input type="radio" name="radio" value="{{ variant.variant_id }}" />{{ variant.name }}</label><br>
+                {% endfor %}
+            </fieldset>
+            <button>Отправить</button>
+        </form>
+    </div>
 </body>
 </html>

@@ -9,16 +9,26 @@
     <br>
     <div style="margin: 50px; border: solid 5px black;">
         <form id="form" method="POST" action="/create_new_poll" style="width: 100%">
-            <input type="text" id="poll_name" name="poll_name" placeholder="Название опроса"><br>
-            <input type="text" id="poll_description" name="poll_description" placeholder="Описание опроса"><br>
+            <input required type="text" id="poll_name" name="poll_name" placeholder="Название опроса"><br>
+            <input required type="text" id="poll_description" name="poll_description" placeholder="Описание опроса"><br>
             <p>Варианты ответа:</p><br>
-            <input type="text" id="variant_1" name="variant_1" placeholder="Текст варианта"><br>
-            <input type="text" id="variant_2" name="variant_2" placeholder="Текст варианта">
+            <input required type="text" id="variant_1" name="variant_1" placeholder="Текст варианта"><br>
+            <input required type="text" id="variant_2" name="variant_2" placeholder="Текст варианта">
+            <br>
+            <button id="button_add_variant">Добавить вариант</button>
+            <br>
+            <br>
+            <button>Создать</button>
         </form>
-<!--        <br>-->
-        <button onclick="add_field()">Добавить вариант</button>
         <script>
-            function add_field() {
+            window.onload = function() {
+                var button_add_variant = document.getElementById("button_add_variant");
+                button_add_variant.addEventListener("click", add_field)
+            };
+
+            function add_field(event) {
+                event.preventDefault()
+
                 // находим форму
                 var x = document.getElementById("form");
 
@@ -26,7 +36,9 @@
                 var new_field = document.createElement("input");
                 // определим нумерацию
                 var inputs = document.querySelectorAll('input[type=text]')
-                var num = parseInt(inputs[inputs.length - 1].id.split('_')[1]) + 1;
+                var last_input = inputs[inputs.length - 1]
+                var num = parseInt(last_input.id.split('_')[1]) + 1;
+
                 // установим для поля ввода тип данных 'text'
                 new_field.setAttribute("type", "text");
                 // установим имя для поля ввода
@@ -45,18 +57,22 @@
                 del_button.innerText = "удалить вариант"
 
                 // добавим поле ввода в форму
-                x.insertAdjacentHTML('beforeend', '<br id="br_'+ num + '">');
-                x.append(new_field)
-                x.append(del_button)
+                const button_add_variant = document.getElementById("button_add_variant");
+                x.insertBefore(new_field, button_add_variant);
+                x.insertBefore(del_button, button_add_variant);
+                del_button.insertAdjacentHTML('afterend', '<br class="br_'+ num + '">');
             };
 
             function delete_field(event) {
                 event.preventDefault()
+
                 var num = this.id.split("_")[1]
                 var variant_element = document.getElementById("variant_" + num);
-                var br_element = document.getElementById("br_" + num);
+                var br_elements = document.getElementsByClassName("br_" + num);
+                const arr = Array.from(br_elements);
+                console.log(br_elements)
                 variant_element.remove();
-                br_element.remove();
+                arr.forEach((element) => element.remove());
                 this.remove();
             }
         </script>

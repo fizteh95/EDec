@@ -6,7 +6,10 @@ from abc import abstractmethod
 import uvicorn
 from fastapi import APIRouter
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi import Request
+from fastapi.encoders import jsonable_encoder
+from starlette import status
 from starlette.templating import _TemplateResponse
 
 from src.web.web_adapter import AbstractWebAdapter
@@ -62,6 +65,12 @@ class FastApiWeb(AbstractWeb):
         self.router.add_api_route(
             path="/new_poll", endpoint=self.new_poll, methods=["GET"]
         )
+        self.router.add_api_route(
+            path="/create_new_poll", endpoint=self.create_new_poll, methods=["POST"]
+        )
+        self.router.add_api_route(
+            path="/poll_vote/{item_id}", endpoint=self.poll_vote, methods=["GET"]
+        )
         # self.router.add_api_route(
         #     path="/metrics", endpoint=self.metrics, methods=["GET"]
         # )
@@ -81,6 +90,36 @@ class FastApiWeb(AbstractWeb):
 
     async def new_poll(self, request: Request) -> _TemplateResponse:
         response: _TemplateResponse = await self.adapter.new_poll(request=request)
+        return response
+
+    async def create_new_poll(self, request: Request) -> RedirectResponse:
+        da = await request.form()
+        da = jsonable_encoder(da)
+        poll_name = da.get("poll_name")
+        poll_description = da.get("poll_description")
+        variants: list[str] = [
+            value
+            for key, value in da.items()
+            if (key not in ["poll_name", "poll_description"])
+            and (isinstance(value, str))
+        ]
+        if (
+            not (poll_name and isinstance(poll_name, str))
+            or not (poll_description and isinstance(poll_description, str))
+            or not (
+                variants
+                and isinstance(variants, list)
+                and all(isinstance(item, str) for item in variants)
+            )
+        ):
+            raise
+        _ = await self.adapter.create_new_poll(
+            poll_name=poll_name, poll_description=poll_description, variants=variants
+        )
+        return RedirectResponse("/polls", status_code=status.HTTP_302_FOUND)
+
+    async def poll_vote(self, request: Request, item_id: str) -> _TemplateResponse:
+        response: _TemplateResponse = await self.adapter.poll_vote(request=request, item_id=item_id)
         return response
 
     @staticmethod
