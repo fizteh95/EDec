@@ -3,8 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <style type="text/css">
+        table, th, td {
+            border: 2px solid black;
+        }
+    </style>
 </head>
 <body>
-
+    <h1>Голосование</h1>
+    <h2>{{ poll.name }}</h2>
+    <h3>{{ poll.description }}</h3>
+    <div style="margin: 50px; border: solid 5px black;">
+        <table style="width: 100%">
+            <tr>
+                <td>Вариант</td>
+                <td>Количество голосов</td>
+            </tr>
+            {% for key, value in results.results %}
+            <tr>
+                <td>{{ key }}</td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 </body>
 </html>

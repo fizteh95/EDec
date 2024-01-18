@@ -12,6 +12,8 @@ from src.domain.events import GetPollIds
 from src.domain.events import GetPollsByIds
 from src.domain.events import Polls
 from src.domain.events import PollsIds
+from src.domain.events import VoteEvent
+from src.domain.models import SimpleVote
 from src.services.message_bus import MessageBus
 
 
@@ -55,6 +57,10 @@ class AbstractWebAdapter(ABC):
     @abstractmethod
     async def poll_vote(self, request: Request, item_id: str) -> _TemplateResponse:
         """Page for vote in poll"""
+
+    @abstractmethod
+    async def create_vote(self, variant_id: str) -> bool:
+        """Create vote in poll"""
 
 
 class WebAdapter(AbstractWebAdapter):
@@ -131,6 +137,17 @@ class WebAdapter(AbstractWebAdapter):
         return self.templates.TemplateResponse(
             "all/poll_vote.html", {"request": request, "poll": poll}
         )
+
+    async def create_vote(self, variant_id: str) -> bool:
+        """Create vote in poll"""
+        create_vote = VoteEvent(
+            vote=SimpleVote(
+                user_id="",
+                variant_id=variant_id,
+            )
+        )
+        _ = await self.bus.public_message(create_vote)
+        return True
 
     async def message_handler(
         self, unparsed_event: tp.Dict[str, tp.Any]

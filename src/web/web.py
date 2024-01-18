@@ -1,15 +1,19 @@
 import json
 import typing as tp
+import uuid
 from abc import ABC
 from abc import abstractmethod
 
 import uvicorn
 from fastapi import APIRouter
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from fastapi import Request
+from fastapi import Response
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import RedirectResponse
 from starlette import status
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import RequestResponseEndpoint
 from starlette.templating import _TemplateResponse
 
 from src.web.web_adapter import AbstractWebAdapter
@@ -40,6 +44,21 @@ class AbstractWeb(ABC):
         raise NotImplementedError
 
 
+class CookieMiddleware(BaseHTTPMiddleware):
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        edec_user_token = request.cookies.get("X-edec-poll")
+        if not edec_user_token:
+            edec_user_token = str(uuid.uuid4())
+        request.state.user_id = edec_user_token
+        # if request.url.path not in ["/healthcheck", "/metrics"]:
+        #     logger.info(f"API request {request.method} {request.url.path}")
+        response = await call_next(request)
+        response.set_cookie(key="X-edec-poll", value=edec_user_token)
+        return response
+
+
 class FastApiWeb(AbstractWeb):
     def __init__(
         self,
@@ -55,6 +74,7 @@ class FastApiWeb(AbstractWeb):
             host=host, port=port, message_handler=message_handler, adapter=adapter
         )
         self.app = FastAPI()
+        self.app.add_middleware(CookieMiddleware)
         self.router = APIRouter()
         self.router.add_api_route(
             path="/healthcheck", endpoint=self.healthcheck, methods=["GET", "POST"]
@@ -71,6 +91,7 @@ class FastApiWeb(AbstractWeb):
         self.router.add_api_route(
             path="/poll_vote/{item_id}", endpoint=self.poll_vote, methods=["GET"]
         )
+        self.router.add_api_route(path="/vote", endpoint=self.vote, methods=["POST"])
         # self.router.add_api_route(
         #     path="/metrics", endpoint=self.metrics, methods=["GET"]
         # )
@@ -119,8 +140,19 @@ class FastApiWeb(AbstractWeb):
         return RedirectResponse("/polls", status_code=status.HTTP_302_FOUND)
 
     async def poll_vote(self, request: Request, item_id: str) -> _TemplateResponse:
-        response: _TemplateResponse = await self.adapter.poll_vote(request=request, item_id=item_id)
+        response: _TemplateResponse = await self.adapter.poll_vote(
+            request=request, item_id=item_id
+        )
         return response
+
+    async def vote(self, request: Request) -> RedirectResponse:
+        da = await request.form()
+        da = jsonable_encoder(da)
+        variant_id = da.get("radio")
+        if (not variant_id) or (not isinstance(variant_id, str)):
+            raise
+        _ = await self.adapter.create_vote(variant_id=variant_id)
+        return RedirectResponse("/polls", status_code=status.HTTP_302_FOUND)
 
     @staticmethod
     def configure_uvicorn_logger() -> dict[str, str]:

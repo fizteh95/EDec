@@ -92,9 +92,9 @@ class FakeDbAdapter(AbstractAdapter):
             result.append(current_poll)
         return result
 
-    async def create_vote(self, user_id: str, poll_id: str, variant_id: str) -> bool:
+    async def create_vote(self, user_id: str, variant_id: str) -> bool:
         new_vote_id = f"{len(self.votes) + 1}"
-        new_vote = SimpleVote(user_id=user_id, poll_id=poll_id, variant_id=variant_id)
+        new_vote = SimpleVote(user_id=user_id, variant_id=variant_id)
         self.votes[new_vote_id] = new_vote
         return True
 

@@ -39,5 +39,10 @@ class SimplePoll(BasePoll):
 @dataclass
 class SimpleVote(BaseDomainModel):
     user_id: str
-    poll_id: str
     variant_id: str
+
+
+@dataclass
+class PollResultModel(BaseDomainModel):
+    poll_id: str
+    results: dict[str, int]  # словарь вида текст_варианта:количество_ответов

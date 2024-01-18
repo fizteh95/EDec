@@ -36,7 +36,7 @@ class AbstractAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def create_vote(self, user_id: str, poll_id: str, variant_id: str) -> bool:
+    async def create_vote(self, user_id: str, variant_id: str) -> bool:
         raise NotImplementedError
 
     @abstractmethod
@@ -69,7 +69,6 @@ class VoteSaver(BaseProcessor):
             return []
         _ = await self.db_adapter.create_vote(
             user_id=event.vote.user_id,
-            poll_id=event.vote.poll_id,
             variant_id=event.vote.variant_id,
         )
         return []

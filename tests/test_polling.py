@@ -76,7 +76,6 @@ async def test_make_vote(fake_db_adapter: AbstractAdapter) -> None:
 
     create_vote = VoteEvent(
         vote=SimpleVote(
-            poll_id=created_poll.poll_id,
             user_id="test_user",
             variant_id=created_poll.variants[0].variant_id,
         )
