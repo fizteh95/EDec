@@ -29,14 +29,14 @@ async def test_create_retrieve_poll(fake_db_adapter: AbstractAdapter) -> None:
         name="test_poll",
         description="test poll for test",
         is_open=True,
-        variants=["yes", "now"],
+        variants=["yes", "no"],
     )
     _ = await bus.public_message(create_poll)
 
     get_poll = GetPollsByIds(
         polls_ids=[list(fake_db_adapter.polls.keys())[0]],  # type: ignore
         sender_user_id="another_test_user",
-        track_for_event_class=Polls,
+        track_for_event_class=[Polls],
     )
     res = await bus.public_message(get_poll)
 
@@ -69,7 +69,7 @@ async def test_make_vote(fake_db_adapter: AbstractAdapter) -> None:
     get_poll = GetPollsByIds(
         polls_ids=[list(fake_db_adapter.polls.keys())[0]],  # type: ignore
         sender_user_id="another_test_user",
-        track_for_event_class=Polls,
+        track_for_event_class=[Polls],
     )
     res = await bus.public_message(get_poll)
     created_poll: SimplePoll = res.polls[0]  # type: ignore
@@ -85,10 +85,10 @@ async def test_make_vote(fake_db_adapter: AbstractAdapter) -> None:
     get_result = GetPollResult(
         poll_id=created_poll.poll_id,
         sender_user_id="test_user",
-        track_for_event_class=PollResult,
+        track_for_event_class=[PollResult],
     )
     res = await bus.public_message(get_result)
 
     assert isinstance(res, PollResult)
     assert res.poll_id == created_poll.poll_id
-    assert res.results == {"1": 1, "2": 0}
+    assert res.results == {"yes": 1, "no": 0}

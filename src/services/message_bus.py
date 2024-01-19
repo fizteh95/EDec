@@ -51,11 +51,12 @@ class ConcreteMessageBus(MessageBus):
                 track_for_id = message.id_
         while self.queue:
             current_message = self.queue.pop(0)
+            # print(f"mb: {current_message}")
             if (
                 track_for_id
                 and track_for_class
                 and not return_event
-                and current_message.__class__ == track_for_class
+                and current_message.__class__ in track_for_class
                 and current_message.parent_id == track_for_id
             ):
                 return_event = current_message

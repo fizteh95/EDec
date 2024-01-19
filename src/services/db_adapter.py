@@ -106,12 +106,21 @@ class FakeDbAdapter(AbstractAdapter):
         if not poll:
             return res
         for v in poll[0].variants:
-            res[v.variant_id] = 0
+            res[v.name] = 0
             for p in self.votes.values():
                 if p.variant_id == v.variant_id:
-                    res[v.variant_id] += 1
+                    res[v.name] += 1
         return res
 
     async def update_poll(self, poll_id: str, is_open: bool) -> bool:
         self.polls[poll_id].is_open = is_open
         return True
+
+    async def has_user_voted(self, user_id: str, poll_id: str) -> bool:
+        for vote in self.votes.values():
+            target_variant = self.variants.get(vote.variant_id)
+            if not isinstance(target_variant, SimpleVariant):
+                continue
+            if target_variant.poll_id == poll_id and vote.user_id == user_id:
+                return True
+        return False

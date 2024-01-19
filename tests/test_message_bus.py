@@ -15,7 +15,7 @@ async def test_message_bus(fake_db_adapter: AbstractAdapter) -> None:
     bus.register(vote_counter)
 
     test_call = GetPollResult(
-        poll_id="1", sender_user_id="test_user", track_for_event_class=PollResult
+        poll_id="1", sender_user_id="test_user", track_for_event_class=[PollResult]
     )
 
     res = await bus.public_message(test_call)

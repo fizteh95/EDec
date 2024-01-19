@@ -19,7 +19,7 @@
                 <td>Вариант</td>
                 <td>Количество голосов</td>
             </tr>
-            {% for key, value in results.results %}
+            {% for key, value in results.results.items() %}
             <tr>
                 <td>{{ key }}</td>
                 <td>{{ value }}</td>

@@ -106,7 +106,10 @@ class FastApiWeb(AbstractWeb):
         return {"status": "ok"}
 
     async def get_polls(self, request: Request) -> _TemplateResponse:
-        response: _TemplateResponse = await self.adapter.get_polls(request=request)
+        user_id = request.state.user_id
+        response: _TemplateResponse = await self.adapter.get_polls(
+            request=request, user_id=user_id
+        )
         return response
 
     async def new_poll(self, request: Request) -> _TemplateResponse:
@@ -134,14 +137,19 @@ class FastApiWeb(AbstractWeb):
             )
         ):
             raise
+        user_id = request.state.user_id
         _ = await self.adapter.create_new_poll(
-            poll_name=poll_name, poll_description=poll_description, variants=variants
+            poll_name=poll_name,
+            poll_description=poll_description,
+            variants=variants,
+            user_id=user_id,
         )
         return RedirectResponse("/polls", status_code=status.HTTP_302_FOUND)
 
     async def poll_vote(self, request: Request, item_id: str) -> _TemplateResponse:
+        user_id = request.state.user_id
         response: _TemplateResponse = await self.adapter.poll_vote(
-            request=request, item_id=item_id
+            request=request, item_id=item_id, user_id=user_id
         )
         return response
 
@@ -151,8 +159,16 @@ class FastApiWeb(AbstractWeb):
         variant_id = da.get("radio")
         if (not variant_id) or (not isinstance(variant_id, str)):
             raise
-        _ = await self.adapter.create_vote(variant_id=variant_id)
-        return RedirectResponse("/polls", status_code=status.HTTP_302_FOUND)
+        user_id = request.state.user_id
+        referer_id = request.headers.get("Referer")
+        if not referer_id:
+            _ = await self.adapter.create_vote(variant_id=variant_id, user_id=user_id)
+            return RedirectResponse("/polls", status_code=status.HTTP_302_FOUND)
+        poll_id = referer_id.split("/")[-1]
+        _ = await self.adapter.create_vote(variant_id=variant_id, user_id=user_id)
+        return RedirectResponse(
+            f"/poll_vote/{poll_id}", status_code=status.HTTP_302_FOUND
+        )
 
     @staticmethod
     def configure_uvicorn_logger() -> dict[str, str]:

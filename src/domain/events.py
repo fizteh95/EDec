@@ -14,7 +14,7 @@ class Event:
 
     id_: str = ""
     parent_id: str = ""
-    track_for_event_class: type | None = None
+    track_for_event_class: list[type] | None = None
 
     def __post_init__(self) -> None:
         self.id_ = str(uuid.uuid4())
@@ -34,7 +34,7 @@ class GetPollResult(Event):
 @dataclass
 class PollResult(Event):
     poll_id: str
-    results: dict[str, int]  # словарь вида вариант_айди:количество_ответов
+    results: dict[str, int]  # словарь вида вариант_имя:количество_ответов
 
 
 @dataclass

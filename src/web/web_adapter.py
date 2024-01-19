@@ -10,6 +10,7 @@ from starlette.templating import _TemplateResponse
 from src.domain.events import CreatePoll
 from src.domain.events import GetPollIds
 from src.domain.events import GetPollsByIds
+from src.domain.events import PollResult
 from src.domain.events import Polls
 from src.domain.events import PollsIds
 from src.domain.events import VoteEvent
@@ -41,7 +42,7 @@ class AbstractWebAdapter(ABC):
         """Get collected prometheus metrics"""
 
     @abstractmethod
-    async def get_polls(self, request: Request) -> _TemplateResponse:
+    async def get_polls(self, request: Request, user_id: str) -> _TemplateResponse:
         """Return polls list"""
 
     @abstractmethod
@@ -50,16 +51,18 @@ class AbstractWebAdapter(ABC):
 
     @abstractmethod
     async def create_new_poll(
-        self, poll_name: str, poll_description: str, variants: list[str]
+        self, poll_name: str, poll_description: str, variants: list[str], user_id: str
     ) -> bool:
         """Create poll from form"""
 
     @abstractmethod
-    async def poll_vote(self, request: Request, item_id: str) -> _TemplateResponse:
+    async def poll_vote(
+        self, request: Request, item_id: str, user_id: str
+    ) -> _TemplateResponse:
         """Page for vote in poll"""
 
     @abstractmethod
-    async def create_vote(self, variant_id: str) -> bool:
+    async def create_vote(self, variant_id: str, user_id: str) -> bool:
         """Create vote in poll"""
 
 
@@ -88,17 +91,17 @@ class WebAdapter(AbstractWebAdapter):
     #     return {header: value for header, value in headers}
     #
 
-    async def get_polls(self, request: Request) -> _TemplateResponse:
+    async def get_polls(self, request: Request, user_id: str) -> _TemplateResponse:
         """Return polls list"""
         polls_ids_request = GetPollIds(
-            sender_user_id="", track_for_event_class=PollsIds
+            sender_user_id=user_id, track_for_event_class=[PollsIds]
         )
         polls_ids: PollsIds = await self.bus.public_message(message=polls_ids_request)  # type: ignore
 
         get_poll_request = GetPollsByIds(
             polls_ids=polls_ids.ids,
             sender_user_id="",
-            track_for_event_class=Polls,
+            track_for_event_class=[Polls],
         )
         res: Polls = await self.bus.public_message(get_poll_request)  # type: ignore
         return self.templates.TemplateResponse(
@@ -111,11 +114,11 @@ class WebAdapter(AbstractWebAdapter):
         )
 
     async def create_new_poll(
-        self, poll_name: str, poll_description: str, variants: list[str]
+        self, poll_name: str, poll_description: str, variants: list[str], user_id: str
     ) -> bool:
         """Create poll from form"""
         create_poll = CreatePoll(
-            creator_id="",
+            creator_id=user_id,
             name=poll_name,
             description=poll_description,
             is_open=True,
@@ -124,25 +127,44 @@ class WebAdapter(AbstractWebAdapter):
         _ = await self.bus.public_message(create_poll)
         return True
 
-    async def poll_vote(self, request: Request, item_id: str) -> _TemplateResponse:
+    async def poll_vote(
+        self, request: Request, item_id: str, user_id: str
+    ) -> _TemplateResponse:
         get_poll_request = GetPollsByIds(
             polls_ids=[str(item_id)],
-            sender_user_id="",
-            track_for_event_class=Polls,
-        )
-        res: Polls = await self.bus.public_message(get_poll_request)  # type: ignore
-
-        poll = res.polls[0]
-
-        return self.templates.TemplateResponse(
-            "all/poll_vote.html", {"request": request, "poll": poll}
+            sender_user_id=user_id,
+            track_for_event_class=[Polls, PollResult],
         )
 
-    async def create_vote(self, variant_id: str) -> bool:
+        res = await self.bus.public_message(get_poll_request)
+        if isinstance(res, Polls):
+            poll = res.polls[0]
+            return self.templates.TemplateResponse(
+                "all/poll_vote.html", {"request": request, "poll": poll}
+            )
+        elif isinstance(res, PollResult):
+            get_poll_request = GetPollsByIds(
+                polls_ids=[str(item_id)],
+                sender_user_id="not_user",
+                track_for_event_class=[Polls],
+            )
+
+            poll_res = await self.bus.public_message(get_poll_request)
+            if not isinstance(poll_res, Polls):
+                raise
+            poll = poll_res.polls[0]
+            return self.templates.TemplateResponse(
+                "all/poll_results.html",
+                {"request": request, "poll": poll, "results": res},
+            )
+        else:
+            raise NotImplementedError
+
+    async def create_vote(self, variant_id: str, user_id: str) -> bool:
         """Create vote in poll"""
         create_vote = VoteEvent(
             vote=SimpleVote(
-                user_id="",
+                user_id=user_id,
                 variant_id=variant_id,
             )
         )
