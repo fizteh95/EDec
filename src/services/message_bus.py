@@ -26,7 +26,6 @@ class MessageBus(ABC):
 class ConcreteMessageBus(MessageBus):
     def __init__(self) -> None:
         """Initialize of bus"""
-        self.queue: list[Event] = []
         self.services: list[Subscriber] = []
 
     def register(self, subscriber: Subscriber) -> None:
@@ -42,16 +41,19 @@ class ConcreteMessageBus(MessageBus):
         track_for_class = None
         track_for_id = None
         return_event = None
+        queue = []
         if isinstance(message, list):
-            self.queue += message
+            queue += message
+            if message[0].track_for_event_class:
+                track_for_class = message[0].track_for_event_class
+                track_for_id = message[0].id_
         elif isinstance(message, Event):
-            self.queue.append(message)
+            queue.append(message)
             if message.track_for_event_class:
                 track_for_class = message.track_for_event_class
                 track_for_id = message.id_
-        while self.queue:
-            current_message = self.queue.pop(0)
-            # print(f"mb: {current_message}")
+        while queue:
+            current_message = queue.pop(0)
             if (
                 track_for_id
                 and track_for_class
@@ -62,5 +64,5 @@ class ConcreteMessageBus(MessageBus):
                 return_event = current_message
             for sub in self.services:
                 events = await sub.process(current_message)
-                self.queue += events
+                queue += events
         return return_event

@@ -11,7 +11,6 @@ from src.domain.events import Polls
 from src.domain.events import PollsIds
 from src.domain.events import VoteEvent
 from src.domain.models import SimplePoll
-from src.domain.models import SimpleVote
 from src.domain.subscriber import Subscriber
 
 

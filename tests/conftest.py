@@ -1,5 +1,3 @@
-import copy
-
 import pytest
 
 from src.domain.processors import AbstractAdapter
